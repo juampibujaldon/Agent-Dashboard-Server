@@ -7,4 +7,7 @@ pub enum AppError {
 
     #[error("Error de validacion: {0}")]
     Validation(String),
+
+    #[error("Recurso no encontrado: {0}")]
+    NotFound(String),
 }

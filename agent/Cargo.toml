@@ -2,8 +2,7 @@
 name = "agent"
 version = "0.1.0"
 edition = "2021"
-[build]
-target = "x86_64-pc-windows-msvc"
+
 
 [dependencies]
 # Async runtime
@@ -40,3 +39,4 @@ tokio-test = "0.4"
 mockito = "1.2"
 # Assertions más expresivas
 assert2 = "0.3"
+serde_json = "1"
