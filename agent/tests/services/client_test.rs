@@ -1,20 +1,20 @@
 use agent::config::settings::Settings;
-use agent::models::metrics::{Metric, MetricCategory};
+use agent::models::payloads::MetricPayload;
 use agent::services::client::Client;
 use agent::AppError;
 
 use mockito::{Matcher, Server};
 use tokio;
 
-fn sample_metric() -> Metric {
-    Metric::new("CPU Usage", 42.0, "%", "server_1", MetricCategory::CPU)
+fn sample_payload() -> MetricPayload {
+    MetricPayload::new("server_1", 42.0, 35.0, 10.0, 55.0)
 }
 
 #[tokio::test]
 async fn send_metric_success_200() {
     let mut server = Server::new_async().await;
 
-    let metric = sample_metric();
+    let metric = sample_payload();
     let api_key = "k123";
 
     let _m = server
@@ -25,7 +25,7 @@ async fn send_metric_success_200() {
         .with_status(200)
         .create();
 
-    let base_url = server.url(); 
+    let base_url = server.url();
     let client = Client::new(base_url, api_key);
 
     let res = client.send_metric(&metric).await;
@@ -36,7 +36,7 @@ async fn send_metric_success_200() {
 async fn send_metric_client_error_400_returns_err_without_retry() {
     let mut server = Server::new_async().await;
 
-    let metric = sample_metric();
+    let metric = sample_payload();
     let api_key = "k123";
 
     let _m = server
@@ -64,7 +64,7 @@ async fn send_metric_client_error_400_returns_err_without_retry() {
 async fn send_metric_server_error_500_retries_and_fails() {
     let mut server = Server::new_async().await;
 
-    let metric = sample_metric();
+    let metric = sample_payload();
     let api_key = "k123";
 
     let _m = server
@@ -130,9 +130,8 @@ async fn health_check_fail_503() {
 async fn send_metrics_batch_counts_ok() {
     let mut server = Server::new_async().await;
 
-    let m1 = sample_metric();
-    let mut m2 = sample_metric();
-    m2.value = 99.9;
+    let m1 = sample_payload();
+    let m2 = MetricPayload::new("server_1", 65.0, 55.0, 30.0, 40.0);
 
     let api_key = "k123";
     let base_url = server.url();
@@ -158,10 +157,10 @@ async fn send_metrics_batch_counts_ok() {
 
 #[tokio::test]
 async fn send_metric_validation_fails_locally_no_http_call() {
-    let server = Server::new_async().await; 
+    let server = Server::new_async().await;
 
-    let mut invalid = sample_metric();
-    invalid.name = "   ".into();
+    let mut invalid = sample_payload();
+    invalid.disk_space = 150.0;
 
     let api_key = "k123";
     let base_url = server.url();
@@ -175,12 +174,10 @@ async fn send_metric_validation_fails_locally_no_http_call() {
 async fn from_settings_constructor_works() {
     let mut server = Server::new_async().await;
 
-    let settings = Settings {
-        api_key: "abc".into(),
-        server_port: 8080,
-    };
-    let base_url = server.url();
-    let client = Client::from_settings(&settings, base_url.clone());
+    let mut settings = Settings::default();
+    settings.api_key = "abc".into();
+    settings.backend_base_url = server.url();
+    let client = Client::from_settings(&settings);
 
     let _m = server
         .mock("GET", "/health")
