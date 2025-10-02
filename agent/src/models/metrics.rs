@@ -1,6 +1,5 @@
-
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metric {
@@ -40,12 +39,12 @@ impl Metric {
             category,
         }
     }
-    
+
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
-    
+
     pub fn is_critical(&self) -> bool {
         match self.category {
             MetricCategory::CPU => self.value > 90.0,
@@ -55,4 +54,3 @@ impl Metric {
         }
     }
 }
-

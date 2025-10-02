@@ -1,9 +1,9 @@
 pub mod config;
-pub mod models;
-pub mod services;
 pub mod errors;
-pub mod repositories;
 pub mod handlers;
+pub mod models;
+pub mod repositories;
+pub mod services;
 
 pub use errors::AppError;
 pub type Result<T> = std::result::Result<T, AppError>;
