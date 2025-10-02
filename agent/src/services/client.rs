@@ -1,7 +1,7 @@
-use crate::{Result, AppError};
-use crate::models::metrics::Metric;
 use crate::config::settings::Settings;
-use reqwest::{Client as ReqwestClient};
+use crate::models::payloads::MetricPayload;
+use crate::{AppError, Result};
+use reqwest::Client as ReqwestClient;
 use std::time::Duration;
 
 /// Cliente HTTP para comunicar el agente con el backend (Python).
@@ -29,38 +29,30 @@ impl Client {
             base_url: base_url.into(),
             api_key: api_key.into(),
             http,
-            max_retries: 2,        // 2 reintentos simples (total 3 intentos contando el 1ro)
+            max_retries: 2, // 2 reintentos simples (total 3 intentos contando el 1ro)
             retry_backoff_ms: 300, // backoff lineal básico
         }
     }
 
     /// Crea un cliente usando Settings (conveniente para main/config).
-    pub fn from_settings(settings: &Settings, base_url: impl Into<String>) -> Self {
-        Self::new(base_url, settings.api_key.clone())
+    pub fn from_settings(settings: &Settings) -> Self {
+        Self::new(settings.backend_base_url.clone(), settings.api_key.clone())
     }
 
     /// Envía una métrica (POST /metrics) con JSON.
     /// - Header: x-api-key
     /// - Reintenta simple en errores 5xx o timeouts.
-    pub async fn send_metric(&self, metric: &Metric) -> Result<()> {
-        // Validación rápida del lado del cliente (defensiva)
-        if metric.name.trim().is_empty() {
-            return Err(AppError::Validation("metric.name vacío".into()));
+    pub async fn send_metric(&self, metric: &MetricPayload) -> Result<()> {
+        if let Err(e) = metric.validate() {
+            return Err(AppError::Validation(e));
         }
-        if metric.unit.trim().is_empty() {
-            return Err(AppError::Validation("metric.unit vacío".into()));
-        }
-        if metric.server_id.trim().is_empty() {
-            return Err(AppError::Validation("metric.server_id vacío".into()));
-        }
-
         let url = self.endpoint("/metrics");
         self.post_with_retries(&url, metric).await
     }
 
     /// Envía un lote de métricas; por simplicidad, itera una por una.
     /// Devuelve la cantidad exitosa (si falla alguna, corta y retorna error).
-    pub async fn send_metrics_batch(&self, metrics: &[Metric]) -> Result<usize> {
+    pub async fn send_metrics_batch(&self, metrics: &[MetricPayload]) -> Result<usize> {
         let mut sent = 0usize;
         for m in metrics {
             self.send_metric(m).await?;

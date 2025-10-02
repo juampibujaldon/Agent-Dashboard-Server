@@ -1,5 +1,5 @@
-use crate::{Result, AppError};
 use crate::models::alert::Alert;
+use crate::{AppError, Result};
 use reqwest::Client as ReqwestClient;
 use std::time::Duration;
 
@@ -59,7 +59,8 @@ impl AlertsClient {
     async fn post_with_retries<T: serde::Serialize>(&self, url: &str, body: &T) -> Result<()> {
         let mut attempt: u8 = 0;
         loop {
-            let resp = self.http
+            let resp = self
+                .http
                 .post(url)
                 .header("x-api-key", &self.api_key)
                 .json(body)
@@ -71,19 +72,27 @@ impl AlertsClient {
                 Ok(r) if r.status().is_client_error() => {
                     let code = r.status();
                     let text = r.text().await.unwrap_or_default();
-                    return Err(AppError::Metrics(format!("backend responded with {}: {}", code, text)));
+                    return Err(AppError::Metrics(format!(
+                        "backend responded with {}: {}",
+                        code, text
+                    )));
                 }
                 Ok(r) if r.status().is_server_error() => {
                     if attempt >= self.max_retries {
                         return Err(AppError::Metrics(format!(
-                            "backend responded with {} after {} retries", r.status(), attempt
+                            "backend responded with {} after {} retries",
+                            r.status(),
+                            attempt
                         )));
                     }
                     attempt += 1;
                     tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;
                 }
                 Ok(r) => {
-                    return Err(AppError::Metrics(format!("unexpected status {}", r.status())));
+                    return Err(AppError::Metrics(format!(
+                        "unexpected status {}",
+                        r.status()
+                    )));
                 }
                 Err(e) => {
                     if attempt >= self.max_retries {
