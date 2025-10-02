@@ -4,3 +4,4 @@ agent/target
 /.env
 
 agent/src/models/alert.rs
+.DS_Store
