@@ -19,7 +19,7 @@ async fn metrics_service_uses_server_id() {
     let mut server = Server::new_async().await;
 
     let expected_body = serde_json::json!({
-        "serverId": "test-srv",
+        "server_id": "test-srv",
         "cpu_usage": 10.0,
         "ram_usage": 20.0,
         "disk_space": 30.0,

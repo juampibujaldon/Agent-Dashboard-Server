@@ -5,7 +5,7 @@ use chrono::{DateTime, FixedOffset};
 /// Incluye timestamp en huso argentino para trazabilidad.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MetricPayload {
-    #[serde(rename = "serverId")]
+    #[serde(rename = "server_id")]
     pub server_id: String,
     pub cpu_usage: f32,
     pub ram_usage: f32,
