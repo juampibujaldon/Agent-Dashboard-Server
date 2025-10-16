@@ -4,39 +4,34 @@ use crate::{AppError, Result};
 use reqwest::Client as ReqwestClient;
 use std::time::Duration;
 
-/// Cliente HTTP para comunicar el agente con el backend (Python).
-/// - Maneja base_url y api_key
-/// - Expone métodos para enviar una métrica, enviar en batch y chequear salud
 pub struct Client {
     base_url: String,
     api_key: String,
     http: ReqwestClient,
-    // Config básico de reintentos (simple)
     max_retries: u8,
     retry_backoff_ms: u64,
 }
 
 impl Client {
-    /// Crea un cliente a partir de strings (útil para inyección manual).
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
         let http = ReqwestClient::builder()
             .user_agent("agent-rust/0.1.0")
             .timeout(Duration::from_secs(10))
             .build()
-            .expect("failed to build reqwest client");
+            .map_err(|e| crate::AppError::Metrics(format!("Failed to build HTTP client: {}", e)))?;
 
-        Self {
+        Ok(Self {
             base_url: base_url.into(),
             api_key: api_key.into(),
             http,
             max_retries: 2, // 2 reintentos simples (total 3 intentos contando el 1ro)
             retry_backoff_ms: 300, // backoff lineal básico
-        }
+        })
     }
 
     /// Crea un cliente usando Settings (conveniente para main/config).
     pub fn from_settings(settings: &Settings) -> Self {
-        Self::new(settings.backend_base_url.clone(), settings.api_key.clone())
+        Self::new(settings.backend_base_url.clone(), settings.api_key.clone()).unwrap()
     }
 
     /// Envía una métrica (POST /metrics) con JSON.
@@ -61,7 +56,6 @@ impl Client {
         Ok(sent)
     }
 
-    /// Chequeo simple de salud (GET /health). Si el backend no lo tiene, podés cambiar a /.
     pub async fn health_check(&self) -> Result<()> {
         let url = self.endpoint("/health");
         let res = self
@@ -82,14 +76,12 @@ impl Client {
         }
     }
 
-    /// Helper: construye URL completa segura
     fn endpoint(&self, path: &str) -> String {
         let base = self.base_url.trim_end_matches('/');
         let path = path.trim_start_matches('/');
         format!("{base}/{path}")
     }
 
-    /// POST con reintentos básicos ante 5xx/timeouts.
     async fn post_with_retries<T: serde::Serialize>(&self, url: &str, body: &T) -> Result<()> {
         let mut attempt: u8 = 0;
 
@@ -105,7 +97,6 @@ impl Client {
             match resp {
                 Ok(r) if r.status().is_success() => return Ok(()),
                 Ok(r) => {
-                    // 4xx: no reintentar (normalmente es bug de request/credenciales)
                     if r.status().is_client_error() {
                         let code = r.status();
                         let text = r.text().await.unwrap_or_default();
@@ -114,7 +105,6 @@ impl Client {
                             code, text
                         )));
                     }
-                    // 5xx: reintentar según política
                     if r.status().is_server_error() {
                         if attempt >= self.max_retries {
                             return Err(AppError::Metrics(format!(
@@ -128,14 +118,12 @@ impl Client {
                         continue;
                     }
 
-                    // Otros estados no comunes: tratarlos como error duro
                     return Err(AppError::Metrics(format!(
                         "unexpected status {}",
                         r.status()
                     )));
                 }
                 Err(e) => {
-                    // Timeout/conexión: reintento hasta max_retries
                     if attempt >= self.max_retries {
                         return Err(AppError::Metrics(format!("http error after retries: {e}")));
                     }

@@ -1,6 +1,8 @@
 use serde::Serialize;
+use chrono::{DateTime, FixedOffset};
 
 /// Representa el payload esperado por el backend Flask.
+/// Incluye timestamp en huso argentino para trazabilidad.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MetricPayload {
     #[serde(rename = "serverId")]
@@ -9,9 +11,12 @@ pub struct MetricPayload {
     pub ram_usage: f32,
     pub disk_space: f32,
     pub temperature: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<DateTime<FixedOffset>>,
 }
 
 impl MetricPayload {
+    /// Crea un nuevo MetricPayload sin timestamp (backward compatibility)
     pub fn new(
         server_id: impl Into<String>,
         cpu_usage: f32,
@@ -25,7 +30,36 @@ impl MetricPayload {
             ram_usage,
             disk_space,
             temperature,
+            timestamp: None,
         }
+    }
+
+    /// Crea un nuevo MetricPayload con timestamp en huso argentino para trazabilidad
+    /// Implementa el principio SOLID de Responsabilidad Única
+    pub fn new_with_timestamp(
+        server_id: impl Into<String>,
+        cpu_usage: f32,
+        ram_usage: f32,
+        disk_space: f32,
+        temperature: f32,
+    ) -> Self {
+        let argentina_offset = FixedOffset::west_opt(3 * 3600).unwrap(); // UTC-3
+        let now_argentina = chrono::Utc::now().with_timezone(&argentina_offset);
+        
+        Self {
+            server_id: server_id.into(),
+            cpu_usage,
+            ram_usage,
+            disk_space,
+            temperature,
+            timestamp: Some(now_argentina),
+        }
+    }
+
+    /// Obtiene el timestamp formateado para trazabilidad
+    /// Implementa el principio KISS - método simple y directo
+    pub fn formatted_timestamp(&self) -> Option<String> {
+        self.timestamp.map(|ts| ts.format("%Y-%m-%d %H:%M:%S %z").to_string())
     }
 
     /// Valida los rangos básicos antes de enviar al backend.

@@ -3,7 +3,9 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_metric_creation() {
-    let metric = Metric::new("CPU Usage", 75.5, "%", "server_1", MetricCategory::CPU);
+    let metric = Metric::new(
+        "CPU Usage", 75.5, "%", "server_1", MetricCategory::CPU,
+    ).unwrap();
     assert_eq!(metric.name, "CPU Usage");
     assert_eq!(metric.value, 75.5);
     assert_eq!(metric.unit, "%");
@@ -15,51 +17,95 @@ async fn test_metric_creation() {
 #[tokio::test]
 async fn test_metric_with_id() {
     let metric = Metric::new(
-        "Memory Usage",
-        60.0,
-        "%",
-        "server_1",
-        MetricCategory::Memory,
-    )
+        "Memory Usage", 85.0, "%", "server_2", MetricCategory::Memory,
+    ).unwrap()
     .with_id("metric_123");
+    
+    assert_eq!(metric.name, "Memory Usage");
+    assert_eq!(metric.value, 85.0);
+    assert_eq!(metric.unit, "%");
+    assert_eq!(metric.server_id, "server_2");
+    assert!(matches!(metric.category, MetricCategory::Memory));
     assert_eq!(metric.id, Some("metric_123".to_string()));
 }
 
 #[tokio::test]
-async fn test_metric_critical_detection() {
-    let cpu_metric = Metric::new("CPU Usage", 95.5, "%", "server_1", MetricCategory::CPU);
-    let memory_metric = Metric::new(
-        "Memory Usage",
-        60.0,
-        "%",
-        "server_1",
-        MetricCategory::Memory,
-    );
-    assert!(cpu_metric.is_critical());
-    assert!(!memory_metric.is_critical());
-}
-
-#[test]
-fn test_metric_timestamp_is_set() {
+async fn test_metric_timestamp_is_set() {
     let before = Utc::now();
-    let m = Metric::new("CPU", 1.0, "%", "s1", MetricCategory::CPU);
+    let metric = Metric::new(
+        "Disk Usage", 90.0, "%", "server_3", MetricCategory::Disk,
+    ).unwrap();
     let after = Utc::now();
-
-    assert!(m.timestamp >= before);
-    assert!(m.timestamp <= after);
+    
+    assert!(metric.timestamp >= before);
+    assert!(metric.timestamp <= after);
 }
 
-#[test]
-fn test_metric_custom_category() {
-    let m = Metric::new(
-        "Temp",
-        42.0,
-        "C",
-        "s1",
-        MetricCategory::Custom("Temp".to_string()),
-    );
-    match &m.category {
-        MetricCategory::Custom(name) => assert_eq!(name, "Temp"),
-        _ => panic!("Esperaba Custom"),
+#[tokio::test]
+async fn test_metric_critical_detection() {
+    let cpu_metric = Metric::new(
+        "CPU Usage", 95.0, "%", "server_1", MetricCategory::CPU,
+    ).unwrap();
+    assert!(cpu_metric.is_critical());
+    
+    let memory_metric = Metric::new(
+        "Memory Usage", 98.0, "%", "server_2", MetricCategory::Memory,
+    ).unwrap();
+    assert!(memory_metric.is_critical());
+    
+    let disk_metric = Metric::new(
+        "Disk Usage", 95.0, "%", "server_3", MetricCategory::Disk,
+    ).unwrap();
+    assert!(disk_metric.is_critical());
+    
+    let normal_metric = Metric::new(
+        "CPU Usage", 50.0, "%", "server_4", MetricCategory::CPU,
+    ).unwrap();
+    assert!(!normal_metric.is_critical());
+}
+
+#[tokio::test]
+async fn test_metric_custom_category() {
+    let custom_metric = Metric::new(
+        "Custom Metric", 42.0, "units", "server_5", MetricCategory::Custom("CustomType".to_string()),
+    ).unwrap();
+    
+    assert_eq!(custom_metric.name, "Custom Metric");
+    assert_eq!(custom_metric.value, 42.0);
+    assert_eq!(custom_metric.unit, "units");
+    assert_eq!(custom_metric.server_id, "server_5");
+    
+    match custom_metric.category {
+        MetricCategory::Custom(category_name) => {
+            assert_eq!(category_name, "CustomType");
+        }
+        _ => panic!("Expected Custom category"),
     }
+}
+
+#[tokio::test]
+async fn test_metric_validation_errors() {
+    // Test empty name
+    let result = Metric::new("", 50.0, "%", "server_1", MetricCategory::CPU);
+    assert!(result.is_err());
+    
+    // Test empty unit
+    let result = Metric::new("CPU Usage", 50.0, "", "server_1", MetricCategory::CPU);
+    assert!(result.is_err());
+    
+    // Test empty server_id
+    let result = Metric::new("CPU Usage", 50.0, "%", "", MetricCategory::CPU);
+    assert!(result.is_err());
+    
+    // Test negative value
+    let result = Metric::new("CPU Usage", -10.0, "%", "server_1", MetricCategory::CPU);
+    assert!(result.is_err());
+    
+    // Test NaN value
+    let result = Metric::new("CPU Usage", f64::NAN, "%", "server_1", MetricCategory::CPU);
+    assert!(result.is_err());
+    
+    // Test infinite value
+    let result = Metric::new("CPU Usage", f64::INFINITY, "%", "server_1", MetricCategory::CPU);
+    assert!(result.is_err());
 }

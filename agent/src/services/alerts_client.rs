@@ -12,24 +12,24 @@ pub struct AlertsClient {
 }
 
 impl AlertsClient {
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> crate::Result<Self> {
         let http = ReqwestClient::builder()
             .user_agent("agent-rust/0.1.0")
             .timeout(Duration::from_secs(10))
             .build()
-            .expect("failed to build reqwest client");
+            .map_err(|e| crate::AppError::Metrics(format!("Failed to build HTTP client: {}", e)))?;
 
-        Self {
+        Ok(Self {
             base_url: base_url.into(),
             api_key: api_key.into(),
             http,
             max_retries: 2,
             retry_backoff_ms: 300,
-        }
+        })
     }
 
     pub async fn send_alert(&self, alert: &Alert) -> Result<()> {
-        // Validaciones mínimas
+
         if alert.server_id.trim().is_empty() {
             return Err(AppError::Validation("alert.server_id vacío".into()));
         }
@@ -55,6 +55,8 @@ impl AlertsClient {
         let path = path.trim_start_matches('/');
         format!("{base}/{path}")
     }
+
+//TODO EXCESO DE RETURN , NO ES CODIGO LIMPIO
 
     async fn post_with_retries<T: serde::Serialize>(&self, url: &str, body: &T) -> Result<()> {
         let mut attempt: u8 = 0;

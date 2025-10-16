@@ -18,8 +18,21 @@ impl SystemMetrics {
         }
     }
 
+    /// Convierte a payload sin timestamp (backward compatibility)
     pub fn into_payload(self, server_id: impl Into<String>) -> MetricPayload {
         MetricPayload::new(
+            server_id,
+            self.cpu_usage,
+            self.ram_usage,
+            self.disk_space,
+            self.temperature,
+        )
+    }
+
+    /// Convierte a payload con timestamp en huso argentino para trazabilidad
+    /// Implementa el principio DRY - reutiliza lógica común
+    pub fn into_payload_with_timestamp(self, server_id: impl Into<String>) -> MetricPayload {
+        MetricPayload::new_with_timestamp(
             server_id,
             self.cpu_usage,
             self.ram_usage,
