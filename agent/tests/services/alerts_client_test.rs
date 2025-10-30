@@ -47,7 +47,7 @@ async fn send_alert_server_error_500_with_retries() {
         .mock("POST", "/alerts")
         .match_header("x-api-key", api_key)
         .with_status(500)
-        .expect_at_least(2) // Al menos 2 intentos (1 inicial + 1 reintento)
+        .expect_at_least(2) 
         .create();
 
     let client = AlertsClient::new(server.url(), api_key).unwrap();
@@ -60,7 +60,6 @@ async fn send_alert_timeout_with_retries() {
     let alert = sample_alert();
     let api_key = "k123";
 
-    // Usar URL inválida para simular timeout/conexión fallida
     let client = AlertsClient::new("http://invalid-host:9999", api_key).unwrap();
     let result = client.send_alert(&alert).await;
     assert!(result.is_err());

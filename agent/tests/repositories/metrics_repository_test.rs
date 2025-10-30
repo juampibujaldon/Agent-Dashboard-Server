@@ -121,14 +121,12 @@ async fn test_metrics_repository_find_by_server_id() {
     assert_eq!(server_1_metrics.len(), 2);
     assert_eq!(server_2_metrics.len(), 1);
 
-    // Verify server_1 metrics
     let server_1_names: Vec<String> = server_1_metrics.iter()
         .map(|m| m.name.clone())
         .collect();
     assert!(server_1_names.contains(&"CPU Usage".to_string()));
     assert!(server_1_names.contains(&"Memory Usage".to_string()));
 
-    // Verify server_2 metrics
     assert_eq!(server_2_metrics[0].name, "Disk Usage");
 }
 
@@ -170,14 +168,12 @@ async fn test_metrics_repository_find_by_category() {
     assert_eq!(cpu_metrics.len(), 2);
     assert_eq!(memory_metrics.len(), 1);
 
-    // Verify CPU metrics
     let cpu_names: Vec<String> = cpu_metrics.iter()
         .map(|m| m.name.clone())
         .collect();
     assert!(cpu_names.contains(&"CPU Usage 1".to_string()));
     assert!(cpu_names.contains(&"CPU Usage 2".to_string()));
 
-    // Verify Memory metrics
     assert_eq!(memory_metrics[0].name, "Memory Usage");
 }
 
@@ -223,15 +219,12 @@ async fn test_metrics_repository_delete() {
     let saved_metric = repository.create(metric).await.unwrap();
     let metric_id = saved_metric.id.unwrap().clone();
 
-    // Verify metric exists
     let found_metric = repository.find_by_id(&metric_id).await.unwrap();
     assert_eq!(found_metric.id, Some(metric_id.clone()));
 
-    // Delete metric
     let deleted = repository.delete(&metric_id).await.unwrap();
     assert!(deleted.id.is_some());
 
-    // Verify metric no longer exists
     let result = repository.find_by_id(&metric_id).await;
     assert!(result.is_err());
 }
@@ -272,7 +265,7 @@ async fn test_metrics_repository_update_nonexistent() {
 async fn test_metrics_repository_clear_all() {
     let repository = MetricsRepository::new();
 
-    // Add some metrics
+    
     let metric1 = Metric::new(
         "CPU Usage",
         75.5,
@@ -292,14 +285,11 @@ async fn test_metrics_repository_clear_all() {
     repository.create(metric1).await.unwrap();
     repository.create(metric2).await.unwrap();
 
-    // Verify metrics exist
     let all_metrics = repository.find_all(None).await.unwrap();
     assert_eq!(all_metrics.len(), 2);
 
-    // Clear all metrics
     repository.clear_all().await;
 
-    // Verify no metrics exist
     let all_metrics_after_clear = repository.find_all(None).await.unwrap();
     assert_eq!(all_metrics_after_clear.len(), 0);
 }
@@ -308,7 +298,6 @@ async fn test_metrics_repository_clear_all() {
 async fn test_metrics_repository_count() {
     let repository = MetricsRepository::new();
 
-    // Clear any existing metrics
     repository.clear_all().await;
 
     let metric1 = Metric::new(

@@ -4,8 +4,6 @@ use crate::traits::repository::Repository;
 use crate::Result;
 use uuid::Uuid;
 
-/// Repositorio de servidores que extiende RepositoryBase
-/// Sigue principio SOLID de Single Responsibility
 pub struct ServersRepository {
     base: RepositoryBase<Server, String>,
 }
@@ -17,7 +15,7 @@ impl ServersRepository {
         }
     }
 
-    /// Busca servidores activos (operación específica de servidores)
+    
     pub async fn find_active_servers(&self) -> Result<Vec<Server>> {
         let all_servers = self.base.find_all(None).await?;
         let active_servers: Vec<Server> = all_servers
@@ -28,7 +26,7 @@ impl ServersRepository {
         Ok(active_servers)
     }
 
-    /// Busca servidores online (operación específica de servidores)
+    
     pub async fn find_online_servers(&self) -> Result<Vec<Server>> {
         let all_servers = self.base.find_all(None).await?;
         let online_servers: Vec<Server> = all_servers
@@ -39,7 +37,7 @@ impl ServersRepository {
         Ok(online_servers)
     }
 
-    /// Busca servidor por hostname (operación específica de servidores)
+    
     pub async fn find_by_hostname(&self, hostname: &str) -> Result<Option<Server>> {
         let all_servers = self.base.find_all(None).await?;
         let server = all_servers
@@ -49,7 +47,7 @@ impl ServersRepository {
         Ok(server)
     }
 
-    /// Busca servidor por IP (operación específica de servidores)
+    
     pub async fn find_by_ip(&self, ip_address: &str) -> Result<Option<Server>> {
         let all_servers = self.base.find_all(None).await?;
         let server = all_servers

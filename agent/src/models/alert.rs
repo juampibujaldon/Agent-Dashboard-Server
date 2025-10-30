@@ -13,7 +13,7 @@ pub enum AlertCondition {
 pub struct Alert {
     pub id: Option<String>,
     pub server_id: String,
-    pub metric_type: String, // "cpu_usage", "ram_usage", etc.
+    pub metric_type: String, 
     pub threshold: f64,
     pub condition: AlertCondition,
     pub created_at: DateTime<Utc>,

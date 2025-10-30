@@ -20,6 +20,16 @@ impl Default for Settings {
 }
 
 impl Settings {
+    
+    pub fn new(backend_base_url: String, server_id: String, interval_secs: u64) -> Self {
+        Self {
+            api_key: "k123".to_string(),
+            backend_base_url,
+            server_id,
+            interval_secs,
+        }
+    }
+
     pub fn load() -> Self {
         let mut settings = Self::default();
         if let Ok(v) = env::var("AGENT_API_KEY") {

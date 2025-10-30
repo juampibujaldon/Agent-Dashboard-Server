@@ -3,8 +3,6 @@ use crate::services::http_client_base::HttpClientBase;
 use crate::traits::http_client::HttpClient;
 use crate::{AppError, Result};
 
-/// Cliente especializado para alertas que usa HttpClientBase
-/// Sigue principio SOLID de Single Responsibility
 pub struct AlertsClient {
     http_client: HttpClientBase,
 }

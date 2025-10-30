@@ -4,8 +4,6 @@ use crate::traits::repository::Repository;
 use crate::Result;
 use uuid::Uuid;
 
-/// Repositorio de alertas que extiende RepositoryBase
-/// Sigue principio SOLID de Single Responsibility
 pub struct AlertsRepository {
     base: RepositoryBase<Alert, String>,
 }
@@ -17,7 +15,6 @@ impl AlertsRepository {
         }
     }
 
-    /// Busca alertas por servidor (operación específica de alertas)
     pub async fn find_by_server_id(&self, server_id: &str, limit: Option<usize>) -> Result<Vec<Alert>> {
         let all_alerts = self.base.find_all(None).await?;
         let mut result: Vec<Alert> = all_alerts
@@ -32,7 +29,6 @@ impl AlertsRepository {
         Ok(result)
     }
 
-    /// Busca alertas activas (operación específica de alertas)
     pub async fn find_active_alerts(&self) -> Result<Vec<Alert>> {
         let all_alerts = self.base.find_all(None).await?;
         let active_alerts: Vec<Alert> = all_alerts
@@ -43,7 +39,6 @@ impl AlertsRepository {
         Ok(active_alerts)
     }
 
-    /// Busca alertas por tipo de métrica (operación específica de alertas)
     pub async fn find_by_metric_type(&self, metric_type: &str) -> Result<Vec<Alert>> {
         let all_alerts = self.base.find_all(None).await?;
         let metric_alerts: Vec<Alert> = all_alerts

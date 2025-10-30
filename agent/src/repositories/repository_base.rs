@@ -5,8 +5,6 @@ use std::fmt::Debug;
 use std::sync::Mutex;
 use uuid::Uuid;
 
-/// Repositorio base en memoria que implementa el trait Repository
-/// Sigue principio SOLID de Single Responsibility
 pub struct RepositoryBase<T, ID> 
 where 
     T: Clone + Send + Sync + Debug,
@@ -31,6 +29,20 @@ where
     fn get_entities(&self) -> Result<std::sync::MutexGuard<'_, HashMap<String, T>>> {
         self.entities.lock().map_err(|_| AppError::Metrics("Failed to acquire repository lock".into()))
     }
+
+    pub async fn clear_all(&self) {
+        let mut entities = match self.get_entities() {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        entities.clear();
+    }
+
+    pub async fn create_with_id(&self, id: String, entity: T) -> Result<T> {
+        let mut entities = self.get_entities()?;
+        entities.insert(id, entity.clone());
+        Ok(entity)
+    }
 }
 
 impl<T, ID> Default for RepositoryBase<T, ID>
@@ -52,7 +64,6 @@ where
     async fn create(&self, entity: T) -> Result<T> {
         let id = Uuid::new_v4().to_string();
         
-        // Insertar la entidad con el ID generado
         let mut entities = self.get_entities()?;
         entities.insert(id.clone(), entity.clone());
         

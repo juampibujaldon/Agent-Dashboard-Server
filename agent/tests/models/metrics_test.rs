@@ -85,27 +85,23 @@ async fn test_metric_custom_category() {
 
 #[tokio::test]
 async fn test_metric_validation_errors() {
-    // Test empty name
     let result = Metric::new("", 50.0, "%", "server_1", MetricCategory::CPU);
     assert!(result.is_err());
     
-    // Test empty unit
     let result = Metric::new("CPU Usage", 50.0, "", "server_1", MetricCategory::CPU);
     assert!(result.is_err());
     
-    // Test empty server_id
     let result = Metric::new("CPU Usage", 50.0, "%", "", MetricCategory::CPU);
     assert!(result.is_err());
     
-    // Test negative value
     let result = Metric::new("CPU Usage", -10.0, "%", "server_1", MetricCategory::CPU);
     assert!(result.is_err());
     
-    // Test NaN value
+    
     let result = Metric::new("CPU Usage", f64::NAN, "%", "server_1", MetricCategory::CPU);
     assert!(result.is_err());
     
-    // Test infinite value
+    
     let result = Metric::new("CPU Usage", f64::INFINITY, "%", "server_1", MetricCategory::CPU);
     assert!(result.is_err());
 }

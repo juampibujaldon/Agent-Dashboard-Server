@@ -3,7 +3,6 @@ use crate::services::client::Client;
 use crate::traits::monitor::SystemMonitor;
 use crate::Result;
 
-/// Servicio simplificado para métricas siguiendo principio KISS
 pub struct MetricsService<M: SystemMonitor> {
     monitor: M,
     client: Client,
@@ -22,19 +21,16 @@ where
         }
     }
 
-    /// Recolecta métricas del sistema
     pub fn collect_metrics(&mut self) -> SystemMetrics {
         self.monitor.collect()
     }
 
-    /// Recolecta y publica métricas (operación principal)
     pub async fn collect_and_publish(&mut self) -> Result<()> {
         let metrics = self.collect_metrics();
         let payload = metrics.into_payload_with_timestamp(self.server_id.clone());
         self.client.send_metric(&payload).await
     }
 
-    /// Obtiene la lista de servidores monitoreados
     pub fn get_servers(&self) -> Vec<String> {
         self.monitor.get_servers()
     }
@@ -64,7 +60,6 @@ mod tests {
     async fn collect_and_publish_sends_payload() {
         let mut server = Server::new_async().await;
 
-        // Mock simple que acepta cualquier request POST a /metrics
         let _m = server
             .mock("POST", "/metrics")
             .match_header("x-api-key", "key")

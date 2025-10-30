@@ -1,8 +1,7 @@
 use serde::Serialize;
 use chrono::{DateTime, FixedOffset};
 
-/// Representa el payload esperado por el backend Flask.
-/// Incluye timestamp en huso argentino para trazabilidad.
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MetricPayload {
     #[serde(rename = "server_id")]
@@ -16,7 +15,7 @@ pub struct MetricPayload {
 }
 
 impl MetricPayload {
-    /// Crea un nuevo MetricPayload sin timestamp (backward compatibility)
+    
     pub fn new(
         server_id: impl Into<String>,
         cpu_usage: f32,
@@ -34,9 +33,7 @@ impl MetricPayload {
         }
     }
 
-    /// Crea un nuevo MetricPayload con timestamp en huso argentino para trazabilidad
-    /// Implementa el principio SOLID de Responsabilidad Única
-    pub fn new_with_timestamp(
+        pub fn new_with_timestamp(
         server_id: impl Into<String>,
         cpu_usage: f32,
         ram_usage: f32,
@@ -56,13 +53,12 @@ impl MetricPayload {
         }
     }
 
-    /// Obtiene el timestamp formateado para trazabilidad
-    /// Implementa el principio KISS - método simple y directo
+    
     pub fn formatted_timestamp(&self) -> Option<String> {
         self.timestamp.map(|ts| ts.format("%Y-%m-%d %H:%M:%S %z").to_string())
     }
 
-    /// Valida los rangos básicos antes de enviar al backend.
+    
     pub fn validate(&self) -> Result<(), String> {
         if self.server_id.trim().is_empty() {
             return Err("server_id vacío".into());

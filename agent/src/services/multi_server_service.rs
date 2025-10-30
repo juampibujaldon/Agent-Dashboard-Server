@@ -4,8 +4,6 @@ use crate::models::system_metrics::SystemMetrics;
 use std::collections::HashMap;
 use tracing::{info, error};
 
-/// Resultado de operaciones multi-servidor simplificado
-/// Sigue principio KISS - solo lo necesario
 #[derive(Debug, Clone)]
 pub struct MultiServerResult {
     pub successful_servers: Vec<String>,
@@ -14,7 +12,6 @@ pub struct MultiServerResult {
 }
 
 impl MultiServerResult {
-    /// Crea un nuevo resultado
     pub fn new() -> Self {
         Self {
             successful_servers: Vec::new(),
@@ -23,29 +20,24 @@ impl MultiServerResult {
         }
     }
 
-    /// Agrega un servidor exitoso
     pub fn add_success(&mut self, server_id: String) {
         self.successful_servers.push(server_id);
         self.total_servers += 1;
     }
 
-    /// Agrega un servidor fallido
     pub fn add_failure(&mut self, server_id: String, error: crate::AppError) {
         self.failed_servers.insert(server_id, error.to_string());
         self.total_servers += 1;
     }
 
-    /// Verifica si todos los servidores fueron exitosos
     pub fn all_successful(&self) -> bool {
         self.failed_servers.is_empty()
     }
 
-    /// Verifica si algún servidor fue exitoso
     pub fn any_successful(&self) -> bool {
         !self.successful_servers.is_empty()
     }
 
-    /// Calcula la tasa de éxito
     pub fn success_rate(&self) -> f64 {
         if self.total_servers == 0 {
             0.0
@@ -61,15 +53,13 @@ impl Default for MultiServerResult {
     }
 }
 
-/// Servicio simplificado para manejar métricas de múltiples servidores
-/// Sigue principios KISS y SRP - una sola responsabilidad
+
 pub struct MultiServerMetricsService {
     client: Client,
     monitor: FakeMonitor,
 }
 
 impl MultiServerMetricsService {
-    /// Crea un nuevo servicio con servidores predefinidos
     pub fn new(client: Client) -> Self {
         Self {
             client,
@@ -77,7 +67,7 @@ impl MultiServerMetricsService {
         }
     }
 
-    /// Crea un servicio con servidores personalizados
+    
     pub fn with_servers(client: Client, servers: Vec<String>) -> Self {
         Self {
             client,
@@ -85,19 +75,17 @@ impl MultiServerMetricsService {
         }
     }
 
-    /// Obtiene la lista de servidores
+    
     pub fn get_servers(&self) -> Vec<String> {
         self.monitor.get_servers()
     }
 
-    /// Recolecta métricas de todos los servidores
-    /// Implementa operación CRUD - Read para múltiples entidades
+    
     pub fn collect_all_metrics(&mut self) -> HashMap<String, SystemMetrics> {
         self.monitor.collect_all_metrics()
     }
 
-    /// Recolecta y publica métricas de todos los servidores
-    /// Implementa operación CRUD - Create para múltiples entidades
+    
     pub async fn collect_and_publish_all(&mut self) -> Result<MultiServerResult, crate::AppError> {
         let all_metrics = self.collect_all_metrics();
         let mut results = MultiServerResult::new();
@@ -134,8 +122,7 @@ impl MultiServerMetricsService {
         Ok(results)
     }
 
-    /// Publica métricas de un servidor específico
-    /// Implementa operación CRUD - Create para entidad específica
+    
     pub async fn collect_and_publish_server(&mut self, server_id: &str) -> Result<(), crate::AppError> {
         let all_metrics = self.collect_all_metrics();
         

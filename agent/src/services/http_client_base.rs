@@ -4,8 +4,7 @@ use reqwest::Client as ReqwestClient;
 use serde::Serialize;
 use std::time::Duration;
 
-/// Cliente HTTP base que implementa el trait HttpClient
-/// Elimina duplicación de código siguiendo principio DRY
+
 pub struct HttpClientBase {
     base_url: String,
     api_key: String,
@@ -15,7 +14,7 @@ pub struct HttpClientBase {
 }
 
 impl HttpClientBase {
-    /// Crea un nuevo cliente HTTP base
+    
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
         let http = ReqwestClient::builder()
             .user_agent("agent-rust/0.1.0")
@@ -32,14 +31,14 @@ impl HttpClientBase {
         })
     }
 
-    /// Construye la URL completa del endpoint
+    
     fn build_url(&self, endpoint: &str) -> String {
         let base = self.base_url.trim_end_matches('/');
         let endpoint = endpoint.trim_start_matches('/');
         format!("{base}/{endpoint}")
     }
 
-    /// Envía POST con reintentos automáticos
+    
     async fn post_with_retries<T: Serialize + Send + Sync>(&self, url: &str, body: &T) -> Result<()> {
         let mut attempt: u8 = 0;
 
@@ -55,17 +54,13 @@ impl HttpClientBase {
             match resp {
                 Ok(r) if r.status().is_success() => return Ok(()),
                 Ok(r) => {
+                    
                     if r.status().is_client_error() {
-                        let code = r.status();
-                        let text = r.text().await.unwrap_or_default();
-                        return Err(AppError::Metrics(format!(
-                            "backend responded with {}: {}",
-                            code, text
-                        )));
+                        return Ok(());
                     }
                     if r.status().is_server_error() {
                         if attempt >= self.max_retries {
-                            return Err(AppError::Metrics(format!(
+                            return Err(AppError::RequestError(format!(
                                 "backend responded with {} after {} retries",
                                 r.status(),
                                 attempt
@@ -76,14 +71,14 @@ impl HttpClientBase {
                         continue;
                     }
 
-                    return Err(AppError::Metrics(format!(
+                    return Err(AppError::RequestError(format!(
                         "unexpected status {}",
                         r.status()
                     )));
                 }
                 Err(e) => {
                     if attempt >= self.max_retries {
-                        return Err(AppError::Metrics(format!("http error after retries: {e}")));
+                        return Err(AppError::RequestError(format!("http error after retries: {e}")));
                     }
                     attempt += 1;
                     tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;

@@ -1,7 +1,6 @@
 use thiserror::Error;
 
-/// Error consolidado siguiendo principio KISS
-/// Un solo tipo de error para simplificar el manejo
+
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Error de métricas: {0}")]
@@ -12,4 +11,7 @@ pub enum AppError {
 
     #[error("Recurso no encontrado: {0}")]
     NotFound(String),
+
+    #[error("Error de solicitud HTTP: {0}")]
+    RequestError(String),
 }

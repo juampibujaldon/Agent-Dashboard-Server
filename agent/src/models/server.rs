@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
-/// Modelo de servidor siguiendo principio KISS
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Server {
     pub id: Option<String>,
@@ -14,7 +14,7 @@ pub struct Server {
 }
 
 impl Server {
-    /// Crea un nuevo servidor con validaciones
+    
     pub fn new(
         name: impl Into<String>,
         hostname: impl Into<String>,
@@ -47,29 +47,28 @@ impl Server {
         })
     }
     
-    /// Asigna un ID al servidor
-    pub fn with_id(mut self, id: impl Into<String>) -> Self {
+        pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
     
-    /// Marca el servidor como activo
+    
     pub fn activate(&mut self) {
         self.is_active = true;
         self.last_seen = Some(Utc::now());
     }
     
-    /// Marca el servidor como inactivo
+    
     pub fn deactivate(&mut self) {
         self.is_active = false;
     }
     
-    /// Actualiza el timestamp de última vez visto
+    
     pub fn update_last_seen(&mut self) {
         self.last_seen = Some(Utc::now());
     }
     
-    /// Verifica si el servidor está online (visto en los últimos 5 minutos)
+    
     pub fn is_online(&self) -> bool {
         if let Some(last_seen) = self.last_seen {
             let now = Utc::now();
