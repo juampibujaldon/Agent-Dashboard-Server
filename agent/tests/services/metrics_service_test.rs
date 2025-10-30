@@ -1,7 +1,7 @@
 use agent::models::system_metrics::SystemMetrics;
 use agent::services::client::Client;
 use agent::services::metrics_service::MetricsService;
-use agent::services::system_monitor::SystemMonitor;
+use agent::traits::monitor::SystemMonitor;
 use mockito::{Matcher, Server};
 
 struct FakeMonitor {
@@ -11,6 +11,10 @@ struct FakeMonitor {
 impl SystemMonitor for FakeMonitor {
     fn collect(&mut self) -> SystemMetrics {
         self.metrics.clone()
+    }
+
+    fn get_servers(&self) -> Vec<String> {
+        vec!["test-srv".to_string()]
     }
 }
 
@@ -36,7 +40,7 @@ async fn metrics_service_uses_server_id() {
     let monitor = FakeMonitor {
         metrics: SystemMetrics::new(10.0, 20.0, 30.0, 40.0),
     };
-    let client = Client::new(server.url(), "key");
+    let client = Client::new(server.url(), "key").unwrap();
     let mut service = MetricsService::new(monitor, client, "test-srv");
 
     service

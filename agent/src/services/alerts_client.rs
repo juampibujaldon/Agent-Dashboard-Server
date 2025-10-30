@@ -1,35 +1,21 @@
 use crate::models::alert::Alert;
+use crate::services::http_client_base::HttpClientBase;
+use crate::traits::http_client::HttpClient;
 use crate::{AppError, Result};
-use reqwest::Client as ReqwestClient;
-use std::time::Duration;
 
+/// Cliente especializado para alertas que usa HttpClientBase
+/// Sigue principio SOLID de Single Responsibility
 pub struct AlertsClient {
-    base_url: String,
-    api_key: String,
-    http: ReqwestClient,
-    max_retries: u8,
-    retry_backoff_ms: u64,
+    http_client: HttpClientBase,
 }
 
 impl AlertsClient {
-    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> crate::Result<Self> {
-        let http = ReqwestClient::builder()
-            .user_agent("agent-rust/0.1.0")
-            .timeout(Duration::from_secs(10))
-            .build()
-            .map_err(|e| crate::AppError::Metrics(format!("Failed to build HTTP client: {}", e)))?;
-
-        Ok(Self {
-            base_url: base_url.into(),
-            api_key: api_key.into(),
-            http,
-            max_retries: 2,
-            retry_backoff_ms: 300,
-        })
+    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
+        let http_client = HttpClientBase::new(base_url, api_key)?;
+        Ok(Self { http_client })
     }
 
     pub async fn send_alert(&self, alert: &Alert) -> Result<()> {
-
         if alert.server_id.trim().is_empty() {
             return Err(AppError::Validation("alert.server_id vacío".into()));
         }
@@ -37,8 +23,7 @@ impl AlertsClient {
             return Err(AppError::Validation("alert.metric_type vacío".into()));
         }
 
-        let url = self.endpoint("/alerts");
-        self.post_with_retries(&url, alert).await
+        self.http_client.post("/alerts", alert).await
     }
 
     pub async fn send_alerts_batch(&self, alerts: &[Alert]) -> Result<usize> {
@@ -48,62 +33,5 @@ impl AlertsClient {
             sent += 1;
         }
         Ok(sent)
-    }
-
-    fn endpoint(&self, path: &str) -> String {
-        let base = self.base_url.trim_end_matches('/');
-        let path = path.trim_start_matches('/');
-        format!("{base}/{path}")
-    }
-
-//TODO EXCESO DE RETURN , NO ES CODIGO LIMPIO
-
-    async fn post_with_retries<T: serde::Serialize>(&self, url: &str, body: &T) -> Result<()> {
-        let mut attempt: u8 = 0;
-        loop {
-            let resp = self
-                .http
-                .post(url)
-                .header("x-api-key", &self.api_key)
-                .json(body)
-                .send()
-                .await;
-
-            match resp {
-                Ok(r) if r.status().is_success() => return Ok(()),
-                Ok(r) if r.status().is_client_error() => {
-                    let code = r.status();
-                    let text = r.text().await.unwrap_or_default();
-                    return Err(AppError::Metrics(format!(
-                        "backend responded with {}: {}",
-                        code, text
-                    )));
-                }
-                Ok(r) if r.status().is_server_error() => {
-                    if attempt >= self.max_retries {
-                        return Err(AppError::Metrics(format!(
-                            "backend responded with {} after {} retries",
-                            r.status(),
-                            attempt
-                        )));
-                    }
-                    attempt += 1;
-                    tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;
-                }
-                Ok(r) => {
-                    return Err(AppError::Metrics(format!(
-                        "unexpected status {}",
-                        r.status()
-                    )));
-                }
-                Err(e) => {
-                    if attempt >= self.max_retries {
-                        return Err(AppError::Metrics(format!("http error after retries: {e}")));
-                    }
-                    attempt += 1;
-                    tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;
-                }
-            }
-        }
     }
 }

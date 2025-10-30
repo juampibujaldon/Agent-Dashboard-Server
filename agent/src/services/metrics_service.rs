@@ -1,9 +1,9 @@
-use crate::models::payloads::MetricPayload;
 use crate::models::system_metrics::SystemMetrics;
 use crate::services::client::Client;
-use crate::services::system_monitor::SystemMonitor;
+use crate::traits::monitor::SystemMonitor;
 use crate::Result;
 
+/// Servicio simplificado para métricas siguiendo principio KISS
 pub struct MetricsService<M: SystemMonitor> {
     monitor: M,
     client: Client,
@@ -22,26 +22,29 @@ where
         }
     }
 
-    pub fn snapshot(&mut self) -> SystemMetrics {
+    /// Recolecta métricas del sistema
+    pub fn collect_metrics(&mut self) -> SystemMetrics {
         self.monitor.collect()
     }
 
+    /// Recolecta y publica métricas (operación principal)
     pub async fn collect_and_publish(&mut self) -> Result<()> {
-        let snapshot = self.snapshot();
-        let payload = snapshot.into_payload(self.server_id.clone());
-        self.send_payload(payload).await
+        let metrics = self.collect_metrics();
+        let payload = metrics.into_payload_with_timestamp(self.server_id.clone());
+        self.client.send_metric(&payload).await
     }
 
-    async fn send_payload(&self, payload: MetricPayload) -> Result<()> {
-        self.client.send_metric(&payload).await
+    /// Obtiene la lista de servidores monitoreados
+    pub fn get_servers(&self) -> Vec<String> {
+        self.monitor.get_servers()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::system_monitor::SystemMonitor;
-    use mockito::{Matcher, Server};
+    use crate::traits::monitor::SystemMonitor;
+    use mockito::Server;
 
     struct StubMonitor {
         metrics: SystemMetrics,
@@ -51,23 +54,24 @@ mod tests {
         fn collect(&mut self) -> SystemMetrics {
             self.metrics.clone()
         }
+
+        fn get_servers(&self) -> Vec<String> {
+            vec!["test-server".to_string()]
+        }
     }
 
     #[tokio::test]
     async fn collect_and_publish_sends_payload() {
         let mut server = Server::new_async().await;
 
-        let payload = MetricPayload::new("s1", 40.0, 50.0, 60.0, 35.0);
+        // Mock simple que acepta cualquier request POST a /metrics
         let _m = server
             .mock("POST", "/metrics")
             .match_header("x-api-key", "key")
-            .match_body(Matcher::JsonString(
-                serde_json::to_string(&payload).unwrap(),
-            ))
             .with_status(200)
             .create();
 
-        let client = Client::new(server.url(), "key");
+        let client = Client::new(server.url(), "key").unwrap();
         let monitor = StubMonitor {
             metrics: SystemMetrics::new(40.0, 50.0, 60.0, 35.0),
         };

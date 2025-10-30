@@ -29,6 +29,9 @@ tracing-subscriber = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
 
+# Traits asíncronos
+async-trait = "0.1"
+
 # Configuración
 config = "0.14"
 

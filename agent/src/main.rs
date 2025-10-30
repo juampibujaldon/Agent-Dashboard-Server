@@ -38,8 +38,6 @@ async fn main() -> anyhow::Result<()> {
                         failed = result.failed_servers.len(),
                         "Algunas métricas aleatorias fallaron al enviarse"
                     );
-                    
-                    // Log detallado de errores
                     for (server_id, error_msg) in &result.failed_servers {
                         error!(server_id = %server_id, error = %error_msg, "Error en servidor");
                     }
@@ -49,7 +47,6 @@ async fn main() -> anyhow::Result<()> {
                 error!(error = %err, "Error crítico en el servicio de métricas aleatorias");
             }
         }
-        
         tokio::time::sleep(std::time::Duration::from_secs(settings.interval_secs)).await;
     }
 }

@@ -57,7 +57,6 @@ async fn send_alert_server_error_500_with_retries() {
 
 #[tokio::test]
 async fn send_alert_timeout_with_retries() {
-    let server = Server::new_async().await;
     let alert = sample_alert();
     let api_key = "k123";
 

@@ -1,4 +1,5 @@
 use crate::models::system_metrics::SystemMetrics;
+use crate::traits::monitor::SystemMonitor;
 use rand::Rng;
 use chrono::Timelike;
 
@@ -40,8 +41,8 @@ impl FakeMonitor {
     }
 
     /// Obtiene la lista de servidores
-    pub fn get_servers(&self) -> &Vec<String> {
-        &self.servers
+    pub fn get_servers(&self) -> Vec<String> {
+        self.servers.clone()
     }
 
     /// Genera métricas base para un servidor específico
@@ -133,7 +134,7 @@ impl FakeMonitor {
     }
 }
 
-impl crate::services::system_monitor::SystemMonitor for FakeMonitor {
+impl SystemMonitor for FakeMonitor {
     /// Implementa la interfaz SystemMonitor
     /// Genera métricas para el primer servidor (compatibilidad)
     fn collect(&mut self) -> SystemMetrics {
@@ -142,6 +143,10 @@ impl crate::services::system_monitor::SystemMonitor for FakeMonitor {
         } else {
             SystemMetrics::new(0.0, 0.0, 0.0, 0.0)
         }
+    }
+
+    fn get_servers(&self) -> Vec<String> {
+        self.servers.clone()
     }
 }
 

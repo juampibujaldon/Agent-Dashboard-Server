@@ -4,8 +4,8 @@ use crate::models::system_metrics::SystemMetrics;
 use std::collections::HashMap;
 use tracing::{info, error};
 
-/// Resultado de operaciones multi-servidor
-/// Implementa el principio SOLID de Responsabilidad Única
+/// Resultado de operaciones multi-servidor simplificado
+/// Sigue principio KISS - solo lo necesario
 #[derive(Debug, Clone)]
 pub struct MultiServerResult {
     pub successful_servers: Vec<String>,
@@ -61,8 +61,8 @@ impl Default for MultiServerResult {
     }
 }
 
-/// Servicio para manejar métricas de múltiples servidores
-/// Implementa el principio SOLID de Responsabilidad Única
+/// Servicio simplificado para manejar métricas de múltiples servidores
+/// Sigue principios KISS y SRP - una sola responsabilidad
 pub struct MultiServerMetricsService {
     client: Client,
     monitor: FakeMonitor,
@@ -78,7 +78,6 @@ impl MultiServerMetricsService {
     }
 
     /// Crea un servicio con servidores personalizados
-    /// Implementa el principio SOLID de Abierto/Cerrado
     pub fn with_servers(client: Client, servers: Vec<String>) -> Self {
         Self {
             client,
@@ -87,7 +86,7 @@ impl MultiServerMetricsService {
     }
 
     /// Obtiene la lista de servidores
-    pub fn get_servers(&self) -> &Vec<String> {
+    pub fn get_servers(&self) -> Vec<String> {
         self.monitor.get_servers()
     }
 
@@ -154,6 +153,6 @@ impl MultiServerMetricsService {
 
 impl Default for MultiServerMetricsService {
     fn default() -> Self {
-        Self::new(Client::new("http://localhost:5000/api", "not-needed").unwrap())
+        Self::new(Client::new("http://localhost:5001/api", "not-needed").unwrap())
     }
 }

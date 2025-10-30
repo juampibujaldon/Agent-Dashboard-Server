@@ -1,9 +1,6 @@
 use crate::models::system_metrics::SystemMetrics;
+use crate::traits::monitor::SystemMonitor;
 use sysinfo::{Components, Disks, System};
-
-pub trait SystemMonitor {
-    fn collect(&mut self) -> SystemMetrics;
-}
 
 pub struct SysinfoMonitor {
     system: System,
@@ -76,6 +73,10 @@ impl SystemMonitor for SysinfoMonitor {
             .fold(0.0f32, f32::max);
 
         SystemMetrics::new(cpu_usage, ram_usage, disk_space, temperature)
+    }
+
+    fn get_servers(&self) -> Vec<String> {
+        vec!["localhost".to_string()]
     }
 }
 

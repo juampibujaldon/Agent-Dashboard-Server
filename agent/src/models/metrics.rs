@@ -32,31 +32,24 @@ impl Metric {
         let name = name.into();
         let unit = unit.into();
         let server_id = server_id.into();
-        
         if name.trim().is_empty() {
             return Err(crate::AppError::Validation("Metric name cannot be empty".into()));
         }
-        
         if unit.trim().is_empty() {
             return Err(crate::AppError::Validation("Metric unit cannot be empty".into()));
         }
-        
         if server_id.trim().is_empty() {
             return Err(crate::AppError::Validation("Server ID cannot be empty".into()));
         }
-        
         if value.is_nan() {
             return Err(crate::AppError::Validation("Metric value cannot be NaN".into()));
         }
-        
         if value.is_infinite() {
             return Err(crate::AppError::Validation("Metric value cannot be infinite".into()));
         }
-        
         if value < 0.0 {
             return Err(crate::AppError::Validation("Metric value cannot be negative".into()));
         }
-        
         Ok(Self {
             id: None,
             name,
@@ -67,12 +60,10 @@ impl Metric {
             category,
         })
     }
-    
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
-    
     pub fn is_critical(&self) -> bool {
         match self.category {
             MetricCategory::CPU => self.value > 90.0,

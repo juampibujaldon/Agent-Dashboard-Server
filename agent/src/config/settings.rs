@@ -22,7 +22,6 @@ impl Default for Settings {
 impl Settings {
     pub fn load() -> Self {
         let mut settings = Self::default();
-
         if let Ok(v) = env::var("AGENT_API_KEY") {
             settings.api_key = v;
         }
@@ -37,7 +36,6 @@ impl Settings {
                 settings.interval_secs = parsed.max(5);
             }
         }
-
         settings
     }
 }

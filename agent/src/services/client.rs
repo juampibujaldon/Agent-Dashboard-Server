@@ -1,32 +1,19 @@
 use crate::config::settings::Settings;
 use crate::models::payloads::MetricPayload;
+use crate::services::http_client_base::HttpClientBase;
+use crate::traits::http_client::HttpClient;
 use crate::{AppError, Result};
-use reqwest::Client as ReqwestClient;
-use std::time::Duration;
 
+/// Cliente especializado para métricas que usa HttpClientBase
+/// Sigue principio SOLID de Single Responsibility
 pub struct Client {
-    base_url: String,
-    api_key: String,
-    http: ReqwestClient,
-    max_retries: u8,
-    retry_backoff_ms: u64,
+    http_client: HttpClientBase,
 }
 
 impl Client {
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Result<Self> {
-        let http = ReqwestClient::builder()
-            .user_agent("agent-rust/0.1.0")
-            .timeout(Duration::from_secs(10))
-            .build()
-            .map_err(|e| crate::AppError::Metrics(format!("Failed to build HTTP client: {}", e)))?;
-
-        Ok(Self {
-            base_url: base_url.into(),
-            api_key: api_key.into(),
-            http,
-            max_retries: 2, // 2 reintentos simples (total 3 intentos contando el 1ro)
-            retry_backoff_ms: 300, // backoff lineal básico
-        })
+        let http_client = HttpClientBase::new(base_url, api_key)?;
+        Ok(Self { http_client })
     }
 
     /// Crea un cliente usando Settings (conveniente para main/config).
@@ -41,8 +28,7 @@ impl Client {
         if let Err(e) = metric.validate() {
             return Err(AppError::Validation(e));
         }
-        let url = self.endpoint("/metrics");
-        self.post_with_retries(&url, metric).await
+        self.http_client.post("/metrics", metric).await
     }
 
     /// Envía un lote de métricas; por simplicidad, itera una por una.
@@ -57,81 +43,6 @@ impl Client {
     }
 
     pub async fn health_check(&self) -> Result<()> {
-        let url = self.endpoint("/health");
-        let res = self
-            .http
-            .get(&url)
-            .header("x-api-key", &self.api_key)
-            .send()
-            .await
-            .map_err(|e| AppError::Metrics(format!("http error: {e}")))?;
-
-        if res.status().is_success() {
-            Ok(())
-        } else {
-            Err(AppError::Metrics(format!(
-                "health_check status {}",
-                res.status()
-            )))
-        }
-    }
-
-    fn endpoint(&self, path: &str) -> String {
-        let base = self.base_url.trim_end_matches('/');
-        let path = path.trim_start_matches('/');
-        format!("{base}/{path}")
-    }
-
-    async fn post_with_retries<T: serde::Serialize>(&self, url: &str, body: &T) -> Result<()> {
-        let mut attempt: u8 = 0;
-
-        loop {
-            let resp = self
-                .http
-                .post(url)
-                .header("x-api-key", &self.api_key)
-                .json(body)
-                .send()
-                .await;
-
-            match resp {
-                Ok(r) if r.status().is_success() => return Ok(()),
-                Ok(r) => {
-                    if r.status().is_client_error() {
-                        let code = r.status();
-                        let text = r.text().await.unwrap_or_default();
-                        return Err(AppError::Metrics(format!(
-                            "backend responded with {}: {}",
-                            code, text
-                        )));
-                    }
-                    if r.status().is_server_error() {
-                        if attempt >= self.max_retries {
-                            return Err(AppError::Metrics(format!(
-                                "backend responded with {} after {} retries",
-                                r.status(),
-                                attempt
-                            )));
-                        }
-                        attempt += 1;
-                        tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;
-                        continue;
-                    }
-
-                    return Err(AppError::Metrics(format!(
-                        "unexpected status {}",
-                        r.status()
-                    )));
-                }
-                Err(e) => {
-                    if attempt >= self.max_retries {
-                        return Err(AppError::Metrics(format!("http error after retries: {e}")));
-                    }
-                    attempt += 1;
-                    tokio::time::sleep(Duration::from_millis(self.retry_backoff_ms)).await;
-                    continue;
-                }
-            }
-        }
+        self.http_client.health_check().await
     }
 }
