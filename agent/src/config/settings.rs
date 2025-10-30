@@ -12,7 +12,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             api_key: "not-needed".into(),
-            backend_base_url: "http://localhost:5000/api".into(),
+            backend_base_url: "http://localhost:5001/api".into(),
             server_id: whoami::fallible::hostname().unwrap_or_else(|_| "server-01".into()),
             interval_secs: 30,
         }
